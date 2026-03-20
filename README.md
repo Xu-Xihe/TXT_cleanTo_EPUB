@@ -1,6 +1,7 @@
-<img src="./public/Icon-square.svg" alt="structure" width="288" />
-
 <div align="center">
+  <img src="./public/Icon-square.svg" alt="structure" width="288" />
+  <br />
+  <br />
   <img alt="Node Current" src="https://img.shields.io/node/v/%40rolldown%2Fplugin-babel">
   <img alt="Python Version" src="https://img.shields.io/badge/python-3.10%2B-blue">
   <img alt="GitHub License" src="https://img.shields.io/github/license/Xu-Xihe/TXT_cleanTo_EPUB">
@@ -12,6 +13,7 @@
 	<img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Xu-Xihe/TXT_cleanTo_EPUB">
 	<img alt="GitHub Issues or Pull Requests" src="https://img.shields.io/github/issues/Xu-Xihe/TXT_cleanTo_EPUB">
  </div>
+
 
 
 
