@@ -29,7 +29,7 @@
 ### Docker 安装（推荐）
 
 ```bash
-docker run -d -p 8888:80 -v /home/path/to/txt:/app/txt txt_cleanto_epub:latest
+docker run -d -p 8888:80 -v /home/path/to/txt:/app/txt starstreammm/txt_cleanto_docker:latest
 ```
 
 也可以选择从Github镜像安装：

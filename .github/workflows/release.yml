@@ -2,8 +2,11 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    tags-ignore:
+      - "*-rc*"
+      - "*-beta*"
+      - "*-alpha*"
+      - "*-dev*"
 
 permissions:
   contents: write
