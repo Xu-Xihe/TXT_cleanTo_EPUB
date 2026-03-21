@@ -13,16 +13,19 @@ import {
     useMediaQuery,
 } from "@mui/material";
 import { useColorScheme } from '@mui/material/styles';
-import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
 import DoneAllRoundedIcon from '@mui/icons-material/DoneAllRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 import Editor from '@monaco-editor/react';
 import * as monaco from "monaco-editor";
 
+import ky from "ky";
+
 import { api } from "../hooks/api";
+import PatternEdit from "./pattern_edit";
 import { useErrorMsg } from "../components/error_popout";
 import { LoadingEditor, LoadingCard } from "./loading";
 
@@ -34,7 +37,7 @@ interface FileName {
     desc?: string;
     source?: string;
 }
-const BUFFER = 200;
+const BUFFER = 188;
 
 
 export default function FileList({ setStep }: { setStep: (step: number) => void }) {
@@ -47,21 +50,27 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
     const [openMdaEditor, setOpenMdaEditor] = useState<boolean>(false);
     const { mode } = useColorScheme();
     const isDark = useMediaQuery("(prefers-color-scheme: dark)");
+    const [patternEditOpen, setPatternEditOpen] = useState<boolean>(false);
 
-    const maxLine = useRef<number>(null);
     const controller = useRef<AbortController | null>(null);
     const srollTimeoutRef = useRef<NodeJS.Timeout>(null);
     const orgEditor = useRef<monaco.editor.IStandaloneCodeEditor>(null);
     const mdfEditor = useRef<monaco.editor.IStandaloneCodeEditor>(null);
     const editorAPI = useRef<typeof monaco.editor>(null);
-    const [refreshEditor, setRefreshEditor] = useState<number>(0);
 
 
     // Function Part
     const file_read = async (filename: string) => {
         try {
-            const data = await api.get("/api/file/read", { searchParams: { filename } }).json<number>();
-            maxLine.current = data;
+            let content = "";
+            const decoder = new TextDecoder("utf-8");
+            const res = (await ky.get("/api/file/read", { searchParams: { filename }, timeout: false })).body?.getReader();
+            while (true) {
+                const { done, value } = await res?.read()!;
+                if (done) break;
+                content += decoder.decode(value, { stream: true });
+            }
+            return content;
         } catch (error) {
             pushMsg("Failed to read file: " + error);
         }
@@ -73,21 +82,12 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
     }
 
 
-    const handleScroll = (init: boolean) => {
-        if (!maxLine.current) {
-            return;
-        }
+    const handleScroll = () => {
+        if (!fileSelect.name) return;
+
         const visibleRange = (orgEditor.current?.getVisibleRanges()[0] as monaco.Range);
-
-        const start_line = init
-            ? 1
-            : visibleRange.startLineNumber;
-
-        const end_line = init
-            ? Math.min(maxLine.current, BUFFER)
-            : Math.min(maxLine.current, visibleRange.endLineNumber + BUFFER);
-
-        const total_line = orgEditor.current?.getModel()?.getLineCount() ?? 0;
+        const start_line = visibleRange.startLineNumber;
+        const end_line = visibleRange.endLineNumber + BUFFER;
 
         if (controller.current) {
             controller.current.abort();
@@ -99,43 +99,7 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
             signal: controller.current.signal
         }).json<Record<string, string[]>>()
             .then((data) => {
-                if (init) {
-                    orgEditor.current?.getModel()?.setValue(data["origin"].join("\n"));
-                }
-                else {
-                    if (end_line <= total_line) {
-                        orgEditor.current?.getModel()?.applyEdits([{
-                            range: {
-                                startLineNumber: start_line,
-                                startColumn: 1,
-                                endLineNumber: end_line,
-                                endColumn: init ? 1 : orgEditor.current.getModel()?.getLineMaxColumn(end_line) ?? 1
-                            },
-                            text: data["origin"].join("\n"),
-                        }]);
-                    }
-                    else {
-                        orgEditor.current?.getModel()?.applyEdits([{
-                            range: {
-                                startLineNumber: start_line,
-                                startColumn: 1,
-                                endLineNumber: total_line,
-                                endColumn: init ? 1 : orgEditor.current.getModel()?.getLineMaxColumn(total_line) ?? 1
-                            },
-                            text: data["origin"].slice(0, total_line - start_line + 1).join("\n") + "\n",
-                        }]);
-                        orgEditor.current?.getModel()?.applyEdits([{
-                            range: {
-                                startLineNumber: total_line + 1,
-                                startColumn: 1,
-                                endLineNumber: total_line + 1,
-                                endColumn: 1
-                            },
-                            text: data["origin"].slice(total_line - start_line + 1).join("\n"),
-                        }]);
-                    }
-                }
-                mdfEditor.current?.getModel()?.setValue(data["format"].join("\n"));
+                mdfEditor.current?.getModel()?.setValue(data["content"].join("\n"));
             })
             .catch((error) => {
                 if ((error as Error).name !== "AbortError") {
@@ -145,7 +109,17 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
         mdfEditor.current?.setScrollTop(0);
     }
 
-
+    const themeSelect = () => {
+        if (mode === "system") {
+            return isDark ? "myvs-dark" : "myvs";
+        }
+        else if (mode === "dark") {
+            return "myvs-dark";
+        }
+        else {
+            return "myvs";
+        }
+    }
 
 
     // Fetch file list eachtime path changes.
@@ -157,20 +131,13 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
 
     useEffect(() => {
         if (!editorAPI.current) return;
-        if (mode === "system") {
-            editorAPI.current?.setTheme(isDark ? "myvs-dark" : "myvs");
-        }
-        else if (mode === "dark") {
-            editorAPI.current?.setTheme("myvs-dark");
-        }
-        else {
-            editorAPI.current?.setTheme("myvs");
-        }
-    }, [mode, fileSelected]);
+        editorAPI.current.setTheme(themeSelect());
+    }, [mode]);
 
 
     return (
         <>
+            <PatternEdit open={patternEditOpen} setOpen={() => { setPatternEditOpen(false); handleScroll(); }} />
             {executing && <LoadingCard list={lsFile.map((f) => f.name)} path="/api/file/execute" next={() => setStep(2)} cancel={() => setExecuting(false)} />}
             <Dialog open={openMdaEditor} onClose={() => { setOpenMdaEditor(false); }} maxWidth={false}>
                 <DialogTitle>编辑作品元数据: {fileSelect.name}</DialogTitle>
@@ -205,17 +172,11 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
             </Dialog>
             <List sx={{ minWidth: 188, maxWidth: 188, overflow: "auto", height: '100%' }}>
                 {lsFile.map((item) => (
-                    <>
+                    <React.Fragment key={item.name}>
                         <ListItemButton
-                            key={item.name}
                             onClick={() => {
                                 setFileSelected(1);
-                                file_read(item.name)
-                                    .then(() => {
-                                        setFileSelected(2);
-                                        setFileSelect(item);
-                                        setRefreshEditor(Date.now());
-                                    })
+                                setFileSelect(item);
                             }}
                         >
                             <ListItemText primary={item.name} secondary={
@@ -227,7 +188,7 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
                             } />
                         </ListItemButton>
                         <Divider variant="middle" />
-                    </>
+                    </React.Fragment>
                 ))}
             </List>
             <Divider orientation="vertical" flexItem />
@@ -265,14 +226,14 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
                             ))}
                         </Box>
                         <Divider orientation="vertical" flexItem />
-                        <Box sx={{ display: 'flex', gap: 8 }}>
+                        <Box sx={{ display: 'flex', gap: 3 }}>
                             <Button
                                 variant="outlined"
-                                startIcon={<SyncRoundedIcon />}
+                                startIcon={<SettingsRoundedIcon />}
                                 sx={{ gap: 1 }}
-                                onClick={() => setRefreshEditor(Date.now())}
+                                onClick={() => setPatternEditOpen(true)}
                             >
-                                刷新
+                                编辑格式
                             </Button>
                             <Button
                                 variant="outlined"
@@ -293,7 +254,7 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
                             开始格式化
                         </Button>
                     </Box>
-                    <Box key={fileSelect.name + refreshEditor} sx={{
+                    <Box key={fileSelect.name} sx={{
                         width: "100%",
                         height: "100%",
                         flexDirection: 'row',
@@ -303,7 +264,7 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
                             height="100%"
                             width="50%"
                             language="text"
-                            theme="myvs"
+                            theme={themeSelect()}
                             options={{
                                 readOnly: true,
                                 wordWrap: "on",
@@ -331,7 +292,7 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
                                     tokenizer: {
                                         root: [
                                             // # 开头的行
-                                            [/^#.*$/, 'hashLine'],
+                                            [/^#{1,2} .*$/, 'hashLine'],
                                             // <div 开头的行
                                             [/^<div.*$/, 'divLine'],
                                             // 其他默认
@@ -358,14 +319,20 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
                                     colors: {},
                                 });
 
-
-                                editor.setModel(api.editor.createModel("", "text/plain"));
+                                if (fileSelect.name) {
+                                    file_read(fileSelect.name)
+                                        .then((data) => {
+                                            editor.setModel(api.editor.createModel(data, "text/plain"));
+                                            setFileSelected(2);
+                                            handleScroll();
+                                        })
+                                }
 
                                 editor.onDidScrollChange(() => {
                                     if (srollTimeoutRef.current) {
                                         clearTimeout(srollTimeoutRef.current);
                                     }
-                                    srollTimeoutRef.current = setTimeout(handleScroll, 300, false);
+                                    srollTimeoutRef.current = setTimeout(() => handleScroll(), 300);
                                 });
                             }}
                         />
@@ -373,7 +340,7 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
                             height="100%"
                             width="50%"
                             language="clearDiff"
-                            theme="myvs"
+                            theme={themeSelect()}
                             options={{
                                 readOnly: true,
                                 wordWrap: "on",
@@ -393,7 +360,6 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
                                 mdfEditor.current = editor;
                                 editorAPI.current = api.editor;
                                 editor.setModel(api.editor.createModel("", "clearDiff"));
-                                setTimeout(handleScroll, 0, true);
                             }}
                         />
                     </Box>

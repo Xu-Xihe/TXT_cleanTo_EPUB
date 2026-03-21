@@ -53,4 +53,5 @@ COPY main.py start.py .
 COPY api ./api
 
 # 启动：Python + Nginx
-CMD ["sh", "-c", "python3 /app/start.py & nginx -g 'daemon off;'"]
+ENTRYPOINT ["tini", "--"]
+CMD ["sh", "-c", "nginx -g 'daemon off;' & exec uvicorn main:app --host 0.0.0.0 --port 38888"]

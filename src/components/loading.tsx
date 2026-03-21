@@ -40,7 +40,7 @@ export function LoadingEditor({ text }: { text: string }) {
             flexDirection: "row",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 6666,
+            zIndex: 666,
             p: 3,
             gap: 1,
             bgcolor: (theme) => theme.vars?.palette.background.default,
@@ -67,7 +67,7 @@ export function LoadingFullScreen() {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 6666,
+            zIndex: 666,
             p: 3,
             bgcolor: (theme) => theme.vars?.palette.background.default,
         }}>
@@ -92,13 +92,14 @@ export function LoadingCard({ list, path, next, cancel, fetchargs }: { list: str
         try {
             const res = (await ky.post(path, { timeout: false, ...fetchargs })).body?.getReader();
             let latest: FileStatus = { filename: "", progress: 0, error: "" };
+            const decoder = new TextDecoder();
             let buffer = "";
 
             while (true) {
                 const { done, value } = await res?.read()!;
                 if (done) break;
 
-                const lines = new TextDecoder().decode(value).split("\n");
+                const lines = decoder.decode(value, { stream: true }).split("\n");
                 buffer = lines.pop()!;
 
                 for (const line of lines) {
@@ -192,13 +193,13 @@ export function LoadingCard({ list, path, next, cancel, fetchargs }: { list: str
             flexDirection: "column",
             justifyContent: "space-between",
             alignItems: "center",
-            zIndex: 6666,
+            zIndex: 666,
             p: 3,
             bgcolor: theme.vars?.palette.background.default,
         }}>
             <List sx={{ width: "100%", maxHeight: "calc(100% - 68px - 6px)", overflowY: "auto" }}>
                 {list.map((file) => (
-                    <ListItem sx={{ width: '100%' }}>
+                    <ListItem sx={{ width: '100%' }} key={file}>
                         <ListItemIcon>
                             {statusIcon[status(file)]}
                         </ListItemIcon>
@@ -227,8 +228,6 @@ export function LoadingCard({ list, path, next, cancel, fetchargs }: { list: str
                     下一步
                 </Button>
             </Box>
-
-
         </Box>
     );
 }

@@ -16,6 +16,7 @@ import {
     DialogContentText,
     DialogActions,
 } from "@mui/material";
+import { useColorScheme } from '@mui/material/styles';
 import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
 import DoneAllRoundedIcon from '@mui/icons-material/DoneAllRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
@@ -41,18 +42,18 @@ interface FileName {
 export default function FileConfirm({ setStep }: { setStep: (step: number) => void }) {
     // Define Value
     const { pushMsg } = useErrorMsg();
+    const { mode } = useColorScheme();
     const isDark = useMediaQuery("(prefers-color-scheme: dark)");
     const [lsFile, setLsFile] = useState<FileName[]>([]);
     const [diffMode, setDiffMode] = useState<boolean>(true);
     const [fileSelect, setFileSelect] = useState<FileName>({ name: "", title: "", creator: "", temp_name: "" });
     const diffEditor = useRef<monaco.editor.IStandaloneDiffEditor | null>(null);
+    const editorAPI = useRef<typeof monaco.editor>(null);
     const [refreshEditor, setRefreshEditor] = useState<number>(0);
     const [isSaved, setIsSaved] = useState<boolean>(true);
     const [saveConfirmOpen, setSaveConfirmOpen] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<number>(1);
     const continueRef = useRef<(value: boolean) => void>((_) => { });
-    const orgContent = useRef<string>("");
-    const mdfContent = useRef<string>("");
 
 
 
@@ -62,8 +63,7 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
             const data = await api.get("/api/tran/get",
                 { searchParams: { oldname: file.name } })
                 .json<Record<string, string>>();
-            orgContent.current = data["origin"];
-            mdfContent.current = data["format"];
+            return data;
         }
         catch (error) {
             pushMsg("获取文件内容失败: " + (error as Error).message);
@@ -78,7 +78,7 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
     const setContent = (file: FileName) => {
         api.post("/api/tran/set",
             {
-                json: { content: mdfContent.current },
+                json: { content: diffEditor.current?.getModifiedEditor().getValue() },
                 searchParams: { oldname: file.name }
             })
             .then(() => {
@@ -112,6 +112,19 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
             });
         }
     }, [diffMode]);
+
+    useEffect(() => {
+        if (!editorAPI.current) return;
+        if (mode === "system") {
+            editorAPI.current?.setTheme(isDark ? "myvs-dark" : "myvs");
+        }
+        else if (mode === "dark") {
+            editorAPI.current?.setTheme("myvs-dark");
+        }
+        else {
+            editorAPI.current?.setTheme("myvs");
+        }
+    }, [mode, fileSelect]);
 
 
 
@@ -160,13 +173,9 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
                                     }
                                 }
                                 setIsLoading(1);
-                                fetchContent(item)
-                                    .then(() => {
-                                        setIsSaved(true);
-                                        setFileSelect(item);
-                                        setRefreshEditor(Date.now());
-                                        setIsLoading(0);
-                                    });
+                                setIsSaved(true);
+                                setFileSelect(item);
+                                setRefreshEditor(Date.now());
                             }}
                         >
                             <ListItemText primary={item.temp_name} />
@@ -206,7 +215,6 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
                             sx={{ gap: 1 }}
                             disabled={isSaved}
                             onClick={() => {
-                                mdfContent.current = diffEditor.current?.getModifiedEditor().getValue() ?? mdfContent.current;
                                 setContent(fileSelect);
                                 setIsSaved(true);
                             }}
@@ -247,8 +255,6 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
                 <DiffEditor
                     key={refreshEditor}
                     theme={isDark ? "vs-dark" : "vs"}
-                    original={orgContent.current}
-                    modified={mdfContent.current}
                     options={{
                         scrollBeyondLastLine: false,
                         minimap: { enabled: false },
@@ -267,13 +273,27 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
                             nonBasicASCII: false
                         }
                     }}
-                    onMount={(editor) => {
+                    onMount={(editor, api) => {
                         diffEditor.current = editor;
+                        editorAPI.current = api.editor;
 
-                        editor.getOriginalEditor().updateOptions({
-                            wordWrap: "on",
-                        });
                         editor.getModifiedEditor().layout();
+
+                        if (fileSelect.name) {
+                            fetchContent(fileSelect)
+                                .then((data) => {
+                                    if (!data) return;
+                                    editor.setModel({
+                                        original: api.editor.createModel(data["origin"], "text/plain"),
+                                        modified: api.editor.createModel(data["format"], "text/plain"),
+                                    });
+                                    setIsLoading(0);
+                                })
+                                .catch((error) => {
+                                    pushMsg("获取文件内容失败: " + (error as Error).message);
+                                    setIsLoading(0);
+                                });
+                        }
 
                         editor.getModifiedEditor().onDidChangeModelContent(() => {
                             setIsSaved(false);

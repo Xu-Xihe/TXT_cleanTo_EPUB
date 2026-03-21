@@ -60,7 +60,8 @@ class FileOpr:
         return cls._file
 
     @classmethod
-    async def read(cls, filename: str) -> int:
+    async def read(cls, filename: str):
+        isEncode = False
         for encoding in ("utf-8", "gbk"):
             cls._content.clear()
             try:
@@ -68,15 +69,17 @@ class FileOpr:
                     PathOpr._path / filename, mode="r", encoding=encoding
                 ) as f:
                     async for line in f:
+                        yield line
+                        print(f"read line: {line}")
                         cls._content.append(line.rstrip())
 
             except UnicodeDecodeError:
                 continue
-
             else:
-                return len(cls._content)
-
-        raise Exception("Cannot decode file with utf-8 or gbk")
+                isEncode = True
+                break
+        if not isEncode:
+            raise Exception("Cannot decode file with utf-8 or gbk")
 
     @classmethod
     async def _match_line(cls, line: str) -> str | None:
@@ -159,12 +162,12 @@ class FileOpr:
         cls._is_empty = False
         for i in range(cursor.start_line - 1, cursor.end_line):
             data = await cls._match_line(cls._content[i])
+            print(f"line {i+1}: {cls._content[i]} -> {data}")
             if data is not None:
                 format_out.append(data)
 
         return {
-            "origin": cls._content[cursor.start_line - 1 : cursor.end_line],
-            "format": format_out,
+            "content": format_out,
         }
 
     @classmethod
@@ -192,10 +195,19 @@ class FileOpr:
             isEncode = False
             for encoding in ("utf-8", "gbk", "utf-8-sig"):
                 try:
+                    # Statistics
                     total_size = (PathOpr._path / cls._file[i].name).stat().st_size
                     current_size = 0
                     last_progress = 0.0
-                    content = f"---\ntitle: {cls._file[i].title}\nauthor: {cls._file[i].creator}\nlanguage: zh-cn\ndesc: {cls._file[i].desc}\nsource: {cls._file[i].source}\n---\n\n"
+
+                    # Generate suffix content
+                    content = f"---\ntitle: {cls._file[i].title}\nauthor: {cls._file[i].creator}\nlanguage: zh-cn\n"
+                    content += f"desc: |\n"
+                    for line in cls._file[i].desc.splitlines():
+                        content += f"  {line.lstrip()}\n"
+                    content += f"source: {cls._file[i].source}\n---\n\n"
+
+                    # Read file and process line by line
                     async with aiofiles.open(
                         PathOpr._path / cls._file[i].name, mode="r", encoding=encoding
                     ) as fr:
@@ -263,10 +275,17 @@ async def updata(data: FileInfo):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@file_router.get("/read", response_model=int)
+@file_router.get("/read")
 async def read(filename: str = Query(..., description="The file name to read.")):
     try:
-        return await FileOpr.read(filename)
+
+        async def progress_stream():
+            async for resp in FileOpr.read(filename):
+                yield resp.encode("utf-8")
+
+        return StreamingResponse(
+            progress_stream(), media_type="text/plain; charset=utf-8"
+        )
     except Exception as e:
         print(str(e))
         raise HTTPException(status_code=400, detail=str(e))

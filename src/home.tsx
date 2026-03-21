@@ -15,7 +15,6 @@ import {
 } from '@mui/material';
 import ContrastRoundedIcon from '@mui/icons-material/ContrastRounded';
 import CableRoundedIcon from '@mui/icons-material/CableRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import NavigateBeforeRoundedIcon from '@mui/icons-material/NavigateBeforeRounded';
 
 import { useColorScheme } from '@mui/material/styles';
@@ -28,8 +27,7 @@ import { api } from './hooks/api';
 
 import useLocalStorage from "./hooks/storage";
 
-import PathSelector from "./components/path_selector";
-import PatternEdit from "./components/pattern_edit";
+import PathSelector from './components/path_selector';
 import FileList from "./components/file_edit";
 import ErrorPopout from './components/error_popout';
 import FileConfirm from './components/file_confirm';
@@ -44,7 +42,6 @@ export default function Home() {
     // UI state
     const [contrastTheme, setContrastTheme] = useState<boolean>(false)
     const [apiConnect, setApiConnect] = useState<boolean>(false);
-    const [patternEditOpen, setPatternEditOpen] = useState<boolean>(false);
 
     useQuery({
         queryKey: ["health"],
@@ -139,15 +136,13 @@ export default function Home() {
                     </Button>
                 </Box>
                 <Box sx={{
+                    display: 'flex',
                     gap: 1,
                 }}>
                     <IconButton>
                         <Badge variant="dot" color={apiConnect ? "success" : "error"}>
                             <CableRoundedIcon />
                         </Badge>
-                    </IconButton>
-                    <IconButton onClick={() => setPatternEditOpen(true)}>
-                        <SettingsRoundedIcon />
                     </IconButton>
                     <IconButton onClick={() => setContrastTheme(!contrastTheme)}>
                         <ContrastRoundedIcon />
@@ -187,7 +182,6 @@ export default function Home() {
     return (
         <>
             <ErrorPopout />
-            {<PatternEdit open={patternEditOpen} setOpen={setPatternEditOpen} />}
             {appBarComponent}
             {apiDisconnectBackdrop}
 

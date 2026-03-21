@@ -1,4 +1,5 @@
 import aiofiles
+import asyncio
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
@@ -68,7 +69,8 @@ class TranOpr:
             path.parent.mkdir(parents=True, exist_ok=True)
             yield ExecuteResponse(filename=f.name, progress=0.3, error="")
             try:
-                pd_convert(
+                await asyncio.to_thread(
+                    pd_convert,
                     str(PathOpr._temp_path / f.temp_name),
                     "epub",
                     format="markdown",
@@ -78,7 +80,7 @@ class TranOpr:
                     ],
                 )
             except Exception as e:
-                yield ExecuteResponse(filename=f.name, progress=0.0, error=str(e))
+                yield ExecuteResponse(filename=f.name, progress=0.1, error=str(e))
                 continue
             else:
                 yield ExecuteResponse(filename=f.name, progress=0.9, error="")

@@ -126,7 +126,6 @@ export default function PatternEdit({ open, setOpen }: { open: boolean, setOpen:
                     }
                 }
             }}
-            sx={{ zIndex: 8888 }}
         >
             <DialogTitle>
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -195,7 +194,7 @@ export default function PatternEdit({ open, setOpen }: { open: boolean, setOpen:
                                 {extendType === (index as number) ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
                             </ListItemButton>
                             <Collapse in={extendType === (index as number)} timeout="auto" unmountOnExit >
-                                <TableContainer component={Paper} sx={{ maxHeight: "50vh", overflow: "auto" }}>
+                                <TableContainer component={Paper} sx={{ maxHeight: "46vh", overflow: "auto" }}>
                                     <Table sx={{ minWidth: 650, overflow: "auto" }} aria-label="simple table" stickyHeader>
                                         <TableHead>
                                             <TableRow>
@@ -217,7 +216,7 @@ export default function PatternEdit({ open, setOpen }: { open: boolean, setOpen:
                                                             }}
                                                         />
                                                     </TableCell>
-                                                    <TableCell align="center" sx={{ width: 338 }}>{
+                                                    <TableCell align="center" sx={{ width: 308 }}>{
                                                         i === editingIndex ?
                                                             <TextField
                                                                 variant="outlined"
@@ -227,7 +226,7 @@ export default function PatternEdit({ open, setOpen }: { open: boolean, setOpen:
                                                             :
                                                             item.alias
                                                     }</TableCell>
-                                                    <TableCell align="center" sx={{ width: 338 }}>{
+                                                    <TableCell align="center" sx={{ width: 308 }}>{
                                                         i === editingIndex ?
                                                             <Tooltip title={<>
                                                                 通配符：
