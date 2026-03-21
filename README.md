@@ -14,9 +14,6 @@
 	<img alt="GitHub Issues or Pull Requests" src="https://img.shields.io/github/issues/Xu-Xihe/TXT_cleanTo_EPUB">
  </div>
 
-
-
-
 ## 功能特色
 
 - Web UI 操作简便直观。
@@ -45,30 +42,26 @@ docker run -d -p 8888:80 -v /home/path/to/txt:/app/txt ghcr.io/xu-xihe/txt_clean
 > 后端api依靠nginx转发路径/api/，如有需要请更改nginx配置。
 
 1. 下载[最新release包](https://github.com/Xu-Xihe/TXT_cleanTo_EPUB/releases/latest/download/release.tar.gz)
-
 2. 首先确保正确安装 `nginx` 并导入项目根目录下 `nginx.conf` 配置文件：
 
    ```bash
    mkdir /etc/nginx/conf.d/
    mv nginx.conf /etc/nginx/conf.d/
    nginx -s reload
-   
+
    # 检查配置是否生效
    nginx -T
    ```
-
 3. 复制前端文件至 `nginx` 指定目录：
 
    ```bash
    mv dist/* /usr/share/nginx/html
    ```
-
 4. 启动python后端服务器：
 
    ```bash
-   python3 start.py
+   uvicorn main:app --host 0.0.0.0 --port 38888
    ```
-
 5. 访问 `http://127.0.0.1:80`
 
 ### 开发模式

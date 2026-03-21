@@ -41,7 +41,7 @@ jobs:
           mkdir release
           cp -r dist release/dist
           cp -r api release/api
-          cp main.py start.py requirements.txt nginx.conf release/
+          cp main.py requirements.txt nginx.conf release/
           tar -czf release.tar.gz release
 
       # -------------------------
