@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "./success.css";
 
 export default function AppleSuccess() {
     const [animate, setAnimate] = useState(false);
