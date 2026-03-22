@@ -91,7 +91,6 @@ export function LoadingCard({ list, path, next, cancel, fetchargs }: { list: str
     const fetchProgress = async () => {
         try {
             const res = (await ky.post(path, { timeout: false, ...fetchargs })).body?.getReader();
-            let latest: FileStatus = { filename: "", progress: 0, error: "" };
             const decoder = new TextDecoder();
             let buffer = "";
 
@@ -99,11 +98,14 @@ export function LoadingCard({ list, path, next, cancel, fetchargs }: { list: str
                 const { done, value } = await res?.read()!;
                 if (done) break;
 
-                const lines = decoder.decode(value, { stream: true }).split("\n");
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
                 buffer = lines.pop()!;
 
                 for (const line of lines) {
-                    latest = JSON.parse(line);
+                    if (!line.trim()) continue;
+
+                    const latest: FileStatus = JSON.parse(line);
 
                     console.log("Latest progress:", latest);
 
