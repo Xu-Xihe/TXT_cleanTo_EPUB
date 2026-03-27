@@ -42,7 +42,7 @@ const BUFFER = 188;
 
 export default function FileList({ setStep }: { setStep: (step: number) => void }) {
     // Define Value
-    const { pushMsg } = useErrorMsg();
+    const { pushError } = useErrorMsg();
     const [lsFile, setLsFile] = useState<FileName[]>([]);
     const [fileSelect, setFileSelect] = useState<FileName>({ name: "", title: "", creator: "" });
     const [executing, setExecuting] = useState<boolean>(false);
@@ -72,13 +72,13 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
             }
             return content;
         } catch (error) {
-            pushMsg("Failed to read file: " + error);
+            pushError(error, "读取文件失败");
         }
     }
 
     const update_mda = (data: FileName) => {
         api.post("/api/file/update", { json: data }).json()
-            .catch((error) => { pushMsg("Failed to update metadata: " + error); })
+            .catch((error) => { pushError(error, "更新元数据失败"); })
     }
 
 
@@ -103,7 +103,7 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
             })
             .catch((error) => {
                 if ((error as Error).name !== "AbortError") {
-                    pushMsg("Failed to fetch file content: " + error);
+                    pushError(error, "获取文件内容失败");
                 }
             })
         mdfEditor.current?.setScrollTop(0);
@@ -126,7 +126,7 @@ export default function FileList({ setStep }: { setStep: (step: number) => void 
     useEffect(() => {
         api.get("/api/file/ls").json<FileName[]>()
             .then((data) => { setLsFile(data); })
-            .catch((error) => { pushMsg("获取文件列表失败: " + (error as Error).message); })
+            .catch((error) => { pushError(error, "获取文件列表失败"); })
     }, []);
 
     useEffect(() => {

@@ -41,7 +41,7 @@ interface FileName {
 
 export default function FileConfirm({ setStep }: { setStep: (step: number) => void }) {
     // Define Value
-    const { pushMsg } = useErrorMsg();
+    const { pushError } = useErrorMsg();
     const { mode } = useColorScheme();
     const isDark = useMediaQuery("(prefers-color-scheme: dark)");
     const [lsFile, setLsFile] = useState<FileName[]>([]);
@@ -66,9 +66,9 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
             return data;
         }
         catch (error) {
-            pushMsg("获取文件内容失败: " + (error as Error).message);
+            pushError(error, "获取文件内容失败");
         }
-    }
+    };
 
     const waitForSaveConfirm = () => new Promise<boolean>((resolve) => {
         setSaveConfirmOpen(true);
@@ -85,7 +85,7 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
                 setIsSaved(true);
             })
             .catch((error) => {
-                pushMsg("保存文件内容失败: " + (error as Error).message);
+                pushError(error, "保存文件内容失败");
             });
     };
 
@@ -94,7 +94,7 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
     useEffect(() => {
         api.get("/api/tran/ls").json<FileName[]>()
             .then((data) => setLsFile(data))
-            .catch((error) => pushMsg("获取文件列表失败: " + (error as Error).message));
+            .catch((error) => pushError(error, "获取文件列表失败"));
     }, []);
 
 
@@ -290,7 +290,7 @@ export default function FileConfirm({ setStep }: { setStep: (step: number) => vo
                                     setIsLoading(0);
                                 })
                                 .catch((error) => {
-                                    pushMsg("获取文件内容失败: " + (error as Error).message);
+                                    pushError(error, "获取文件内容失败");
                                     setIsLoading(0);
                                 });
                         }

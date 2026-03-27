@@ -20,7 +20,7 @@ import { useErrorMsg } from "../components/error_popout";
 export default function PathSelector({ init_path, setInitPath, setStep }: { init_path: string, setInitPath: (para: string) => void, setStep: (para: number) => void }) {
     const [lsDir, setLsDir] = useState<string[]>([]);
     const [path, setPath] = useState<string>(init_path);
-    const { pushMsg } = useErrorMsg();
+    const { pushError } = useErrorMsg();
 
     const set_path = (path: string) => {
         api.get("/api/path/set", { searchParams: { path } }).json()
@@ -28,7 +28,7 @@ export default function PathSelector({ init_path, setInitPath, setStep }: { init
                 setInitPath(path);
                 setStep(1);
             })
-            .catch((error) => { pushMsg("Failed to set path: " + error) })
+            .catch((error) => { pushError(error, "设置路径失败") })
 
     }
 
@@ -36,14 +36,14 @@ export default function PathSelector({ init_path, setInitPath, setStep }: { init
         if (init_path == "") {
             api.get("/api/path/get").json<string>()
                 .then((data) => { setPath(data) })
-                .catch((error) => { pushMsg("Failed to get default path: " + error) })
+                .catch((error) => { pushError(error, "获取默认路径失败") })
         }
     }, []);
 
     useEffect(() => {
         api.get("/api/path/folder", { searchParams: { path } }).json<string[]>()
             .then((data) => { setLsDir(data); })
-            .catch((error) => { pushMsg("Failed to fetch path ls:" + error); })
+            .catch((error) => { pushError(error, "获取路径列表失败") })
     }, [path]);
 
     return (

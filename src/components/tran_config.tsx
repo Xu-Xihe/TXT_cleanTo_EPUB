@@ -34,7 +34,7 @@ interface FileName {
 
 
 export default function TranConfig() {
-    const { pushMsg } = useErrorMsg();
+    const { pushError } = useErrorMsg();
     const [tranConfig, setTranConfig] = useLocalStorage<TranConfig>("tranconfig", { save_txt: false, del_origin: false }, "local")
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [isSuccess, setIsSuccess] = useState<boolean>(false)
@@ -43,7 +43,7 @@ export default function TranConfig() {
     useEffect(() => {
         api.get("/api/tran/ls").json<FileName[]>()
             .then((data) => lsFile.current = data.map((f) => f.name))
-            .catch((error) => pushMsg("获取文件列表失败: " + (error as Error).message));
+            .catch((error) => pushError(error, "获取文件列表失败"));
     }, []);
 
     return (

@@ -78,7 +78,7 @@ export function LoadingFullScreen() {
 }
 
 export function LoadingCard({ list, path, next, cancel, fetchargs }: { list: string[]; path: string; next: () => void; cancel: () => void; fetchargs?: Record<string, any> }) {
-    const { pushMsg } = useErrorMsg();
+    const { pushMsg, pushError } = useErrorMsg();
     const theme = useTheme();
     const [isFinished, setFinished] = useState(true);
     const [onGoing, setOngoing] = useState<FileStatus>({ filename: "", progress: 0, error: "" });
@@ -143,8 +143,8 @@ export function LoadingCard({ list, path, next, cancel, fetchargs }: { list: str
             }
             catch { }
         }
-        catch (e) {
-            pushMsg("File Execute: " + e);
+        catch (error) {
+            pushError(error, "执行文件");
         }
         setFinished(false);
     }
@@ -172,7 +172,7 @@ export function LoadingCard({ list, path, next, cancel, fetchargs }: { list: str
             else
                 return 3; // Pending
         }
-        pushMsg(`File ${name} not found in status list.`);
+        pushMsg(`未找到文件状态: ${name}`);
         return -1; // Not found
 
     }

@@ -59,7 +59,7 @@ export default function PatternEdit({ open, setOpen }: { open: boolean, setOpen:
     const [extendType, setExtendType] = useState<number>(0);
     const [editingIndex, setEditingIndex] = useState<number>(-1);
     const [tempPattern, setTempPattern] = useState<PatternEditProps>({ enable: true, alias: "", pattern: "" });
-    const { pushMsg } = useErrorMsg();
+    const { pushError } = useErrorMsg();
 
 
     const patternTypeMap: [string, React.Dispatch<React.SetStateAction<PatternEditProps[]>>][] = [
@@ -77,7 +77,7 @@ export default function PatternEdit({ open, setOpen }: { open: boolean, setOpen:
                     .then((data) => {
                         set(data)
                     })
-                    .catch((error) => { pushMsg(`Failed to fetch ${type} pattern: ` + error) })
+                    .catch((error) => { pushError(error, `获取 ${type} 格式失败`) })
             }
         })
     }
@@ -88,12 +88,12 @@ export default function PatternEdit({ open, setOpen }: { open: boolean, setOpen:
                 .then(() => { fetch(type); })
                 .catch((error) => {
                     fetch(type);
-                    pushMsg("Failed to delete pattern: " + error);
+                    pushError(error, "删除格式失败");
                 })
         }
         else {
             api.post(`/api/pattern/${type}/update`, { json: p, searchParams: { old_alias } })
-                .catch((error) => { pushMsg("Failed to update pattern: " + error); })
+                .catch((error) => { pushError(error, "更新格式失败"); })
         }
         fetch(type);
     }
@@ -101,7 +101,7 @@ export default function PatternEdit({ open, setOpen }: { open: boolean, setOpen:
     const reset = (type: string) => {
         api.get(`/api/pattern/${type}/reset`)
             .then(() => { fetch(type); })
-            .catch((error) => { pushMsg((error as Error).message); })
+            .catch((error) => { pushError(error, "重置格式失败"); })
     }
 
     // useEffect Part
